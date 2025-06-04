@@ -117,7 +117,7 @@ const Header: React.FC<HeaderProps> = ({
             >
               <span className="text-white text-lg sm:text-xl select-none">🗓️</span>
             </div>
-            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap">
+            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap overflow-x-auto sm:overflow-visible scrollbar-hide max-w-[calc(100vw-68px)] sm:max-w-none">
               <span className="text-[#00d4ff]">覇権</span>アニメさがせるくん
             </h1>
           </div>
