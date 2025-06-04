@@ -46,9 +46,8 @@ const Header: React.FC<HeaderProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchIconRef = useRef<HTMLButtonElement>(null); // Added declaration for searchIconRef
-  const searchContainerRef = useRef<HTMLDivElement>(null); // Ref for the div wrapping search icon/form
-  // const formRef = useRef<HTMLFormElement>(null); // Optional: if form needs direct ref for click outside
+  const searchIconRef = useRef<HTMLButtonElement>(null); 
+  const searchContainerRef = useRef<HTMLDivElement>(null); 
 
   const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
 
@@ -62,9 +61,7 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleCloseSearch = useCallback(() => {
     setIsSearchActive(false);
-    // setSearchTerm(''); // Optionally clear search term
-    // onSearch('');      // Optionally trigger empty search
-  }, [/* setSearchTerm, onSearch */]);
+  }, []);
 
   useEffect(() => {
     if (isSearchActive && searchInputRef.current) {
@@ -74,8 +71,6 @@ const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Use searchContainerRef, as the form (even if fixed) is a DOM child of it
-      // or the icon is a child. This ensures clicking outside the conceptual "search area" closes it.
       if (isSearchActive &&
           searchContainerRef.current && 
           !searchContainerRef.current.contains(event.target as Node)) {
@@ -95,7 +90,6 @@ const Header: React.FC<HeaderProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchTerm); 
-    // handleCloseSearch(); // Optionally close search on submit, might be better to keep it open
   };
 
   const navButtonClass = (view: ActiveView) => 
@@ -123,12 +117,12 @@ const Header: React.FC<HeaderProps> = ({
             >
               <span className="text-white text-lg sm:text-xl select-none">🗓️</span>
             </div>
-            <h1 className="brand-name text-lg sm:text-xl md:text-2xl font-bold font-mplus text-white whitespace-nowrap">
+            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap">
               <span className="text-[#00d4ff]">覇権</span>アニメさがせるくん
             </h1>
           </div>
 
-          <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5 w-full sm:w-auto justify-end sm:justify-start order-1 sm:order-none">
+          <div className="flex items-center flex-wrap justify-start sm:flex-nowrap sm:justify-start gap-x-1 gap-y-1 sm:gap-x-1.5 w-full sm:w-auto order-1 sm:order-none">
             <nav className="flex items-center gap-x-0.5 sm:gap-x-1" aria-label="メインナビゲーション">
               <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
                 ホーム
@@ -178,7 +172,6 @@ const Header: React.FC<HeaderProps> = ({
                 {isSearchActive ? (
                   <form
                     onSubmit={handleSearchSubmit}
-                    // ref={formRef} // Optional: if form needs direct ref for click outside
                     className={`
                       flex items-center transition-all duration-300 ease-in-out
                       fixed inset-x-0 top-0 h-16 bg-[#0f171e] shadow-xl justify-between px-3 z-[60]
