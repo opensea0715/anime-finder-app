@@ -191,29 +191,44 @@ const fetchGraphQL = async <T>(query: string, variables: any, cacheKey: string):
 
     if (!response.ok) {
       const errorBody = await response.text();
-      let errorMessage = `HTTPエラー ${response.status}: `;
-      try {
-        const parsedError = JSON.parse(errorBody);
-        if (parsedError && parsedError.errors && parsedError.errors.length > 0) {
-          errorMessage += parsedError.errors.map((e: any) => e.message).join(', ');
-        } else {
-          errorMessage += response.statusText;
-        }
-      } catch (e) {
-        errorMessage += response.statusText;
+      let finalErrorMessage: string;
+
+      if (response.status === 429) {
+        finalErrorMessage = "リクエストが多すぎます。しばらく時間を空けてから再度お試しください。";
+      } else if (response.status >= 500 && response.status < 600) {
+        finalErrorMessage = `サーバー側で一時的な問題が発生しているようです (エラーコード: ${response.status})。お手数ですが、しばらくしてからもう一度お試しください。`;
+        try {
+            const parsedBody = JSON.parse(errorBody);
+            if (parsedBody && parsedBody.errors && parsedBody.errors.length > 0) {
+                const serverSpecificMessage = parsedBody.errors.map((e: any) => e.message).join(', ');
+                if (serverSpecificMessage && serverSpecificMessage.toLowerCase().trim() !== "internal server error") {
+                    finalErrorMessage = `サーバーエラー (コード: ${response.status}): ${serverSpecificMessage}。しばらくしてから再試行してください。`;
+                }
+            }
+        } catch (e) { /* Parsing failed, stick with the generic 5xx message */ }
+      } else { // For other errors (e.g., 400, 401, 403, 404)
+        let specificDetails = response.statusText || "不明なクライアントエラー";
+        try {
+            const parsedBody = JSON.parse(errorBody);
+            if (parsedBody && parsedBody.errors && parsedBody.errors.length > 0) {
+                specificDetails = parsedBody.errors.map((e: any) => e.message).join(', ');
+            }
+        } catch (e) { /* Parsing failed, stick with statusText or default */ }
+        finalErrorMessage = `リクエスト処理中にエラーが発生しました (コード: ${response.status}, 詳細: ${specificDetails})。入力内容や権限を確認してください。`;
       }
-      console.error('GraphQL Error Response Body:', errorBody);
-      throw new Error(errorMessage);
+      
+      console.error(`GraphQL HTTP Error ${response.status}. Response Body:`, errorBody);
+      throw new Error(finalErrorMessage);
     }
     
-    const result = await response.json() as T & { errors?: any[] }; // Add errors property for checking
+    const result = await response.json() as T & { errors?: any[] };
     if (result.errors) {
-      console.error('GraphQL Errors:', result.errors);
-      const errorMessage = result.errors.map(e => e.message).join(', ');
-      if (errorMessage.includes("Too Many Requests")) {
-        throw new Error("リクエストが多すぎます。しばらくしてから再度お試しください。");
+      console.error('GraphQL Logical Errors (HTTP 200):', result.errors);
+      const graphQlErrorMessage = result.errors.map(e => e.message).join(', ');
+      if (graphQlErrorMessage.toLowerCase().includes("too many requests")) {
+        throw new Error("リクエストが多すぎます。しばらく時間を空けてから再度お試しください。");
       }
-      throw new Error(`GraphQLエラー: ${errorMessage}`);
+      throw new Error(`API処理エラー: ${graphQlErrorMessage}。`);
     }
 
     try {
@@ -246,13 +261,16 @@ const fetchGraphQL = async <T>(query: string, variables: any, cacheKey: string):
     let detailedMessage = 'GraphQLデータの取得中に不明なエラーが発生しました。';
 
     if (error instanceof Error) {
-      console.error(`Error details: name=${error.name}, message=${error.message}, type=${error.constructor.name}`);
+      // The error.message should now be one of the user-friendly messages from above.
+      // The "Failed to fetch" case remains important for true network failures.
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
         detailedMessage = 'ネットワーク接続に問題があるか、ブラウザのセキュリティポリシー (CORS等) によりリクエストがブロックされた可能性があります。お使いのネットワーク環境を確認し、ブラウザの開発者コンソールで詳細なエラーを確認してください。ローカルファイル (file://) からアクセスしている場合、Webサーバー経由でのアクセスをお試しください。';
       } else {
-        detailedMessage = error.message;
+        detailedMessage = error.message; // This will now be the improved message from the blocks above
       }
+      console.error(`Error details: name=${error.name}, message=${error.message}, type=${error.constructor.name}`);
     }
+    // Ensure the returned structure mimics a GraphQL error response for consistent handling in App.tsx
     return { errors: [{ message: detailedMessage }] } as unknown as T;
   }
 };

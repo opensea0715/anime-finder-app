@@ -49,11 +49,40 @@ const Header: React.FC<HeaderProps> = ({
   const searchIconRef = useRef<HTMLButtonElement>(null); 
   const searchContainerRef = useRef<HTMLDivElement>(null); 
 
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const headerRef = useRef<HTMLElement>(null);
+  const SCROLL_THRESHOLD = 5; // Minimum scroll distance to trigger change
+
   const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
 
   useEffect(() => {
      onSearch(debouncedSearchTerm);
   }, [debouncedSearchTerm, onSearch]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!headerRef.current) return;
+      const currentScrollY = window.scrollY;
+      const headerHeight = headerRef.current.offsetHeight;
+
+      if (Math.abs(currentScrollY - lastScrollY.current) < SCROLL_THRESHOLD) {
+          return; 
+      }
+
+      if (currentScrollY > lastScrollY.current && currentScrollY > headerHeight) {
+          setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollY.current || currentScrollY < headerHeight ) {
+          setIsHeaderVisible(true);
+      }
+      lastScrollY.current = Math.max(0, currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []); // Empty dependency array - runs once on mount
 
   const handleSearchIconClick = () => {
     setIsSearchActive(true);
@@ -61,6 +90,8 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleCloseSearch = useCallback(() => {
     setIsSearchActive(false);
+    // Restore focus to search icon if it's still mounted
+    searchIconRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -105,11 +136,15 @@ const Header: React.FC<HeaderProps> = ({
   const showSelectorsAndFilters = activeView !== 'calendar';
 
   return (
-    <header className="bg-[#141f2a] shadow-md sticky top-0 z-50 py-2.5">
+    <header 
+      ref={headerRef}
+      className={`bg-[#141f2a] shadow-md sticky top-0 z-50 py-2.5 transform transition-transform duration-300 ease-in-out ${!isHeaderVisible ? '-translate-y-full' : 'translate-y-0'}`}
+    >
       <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-x-2 gap-y-2">
+        {/* Main content row: now flex-nowrap and scrollable on all sizes if needed */}
+        <div className="flex flex-nowrap items-center justify-between gap-x-3 overflow-x-auto scrollbar-hide sm:gap-x-4">
           
-          <div className="brand-header flex-shrink-0">
+          <div className="brand-header flex-shrink-0"> {/* Logo and Title container */}
             <div 
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0"
               role="img"
@@ -117,12 +152,14 @@ const Header: React.FC<HeaderProps> = ({
             >
               <span className="text-white text-lg sm:text-xl select-none">🗓️</span>
             </div>
-            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap overflow-x-auto sm:overflow-visible scrollbar-hide max-w-[calc(100vw-68px)] sm:max-w-none">
+            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap">
               <span className="text-[#00d4ff]">覇権</span>アニメさがせるくん
             </h1>
           </div>
 
-          <div className="flex items-center flex-wrap justify-start sm:flex-nowrap sm:justify-start gap-x-1 gap-y-1 sm:gap-x-1.5 w-full sm:w-auto order-1 sm:order-none">
+          {/* Controls Group: Navigation, Selectors, Filter, Search */}
+          {/* This group also needs to be flex-nowrap to prevent its internal items from wrapping if the group itself becomes too wide for its allocated space (though the parent scroll should handle most of it) */}
+          <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5 flex-shrink-0">
             <nav className="flex items-center gap-x-0.5 sm:gap-x-1" aria-label="メインナビゲーション">
               <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
                 ホーム
@@ -136,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
 
             {showSelectorsAndFilters && (
-              <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5">
+              <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5"> {/* Inner group also nowrap */}
                 <div className="w-[5.5rem] sm:w-24 md:w-28 flex-shrink-0">
                   <CustomDropdown
                     id="header-year-select"
@@ -168,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({
             )}
             
             {showSelectorsAndFilters && (
-              <div ref={searchContainerRef} className="relative flex items-center">
+              <div ref={searchContainerRef} className="relative flex items-center flex-shrink-0"> {/* Search also flex-shrink-0 */}
                 {isSearchActive ? (
                   <form
                     onSubmit={handleSearchSubmit}

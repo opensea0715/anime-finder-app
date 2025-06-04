@@ -593,9 +593,12 @@ const App: React.FC = () => {
           </>
         )}
       </main>
-      <footer className="text-center py-4 text-sm text-gray-500 border-t border-gray-700 mt-auto">
-        データ提供: <a href="https://anilist.co" target="_blank" rel="noopener noreferrer" className="text-[#00d4ff] hover:underline">AniList</a>. 
-        Favicon by <a href="https://icons8.com" target="_blank" rel="noopener noreferrer" className="text-[#00d4ff] hover:underline">Icons8</a>.
+      <footer className="text-sm text-gray-400 text-center mt-10 mb-4">
+        <p>&copy; 2025 アニメさがせるくん</p>
+        <p>データ提供：<a href="https://anilist.co" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#00d4ff]">AniList API</a></p>
+        <p>
+          <a href="/terms" className="underline hover:text-[#00d4ff]">利用規約</a> / <a href="/privacy" className="underline hover:text-[#00d4ff]">プライバシーポリシー</a>
+        </p>
       </footer>
       {selectedAnimeForModal && (
         <AnimeDetailModal
