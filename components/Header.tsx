@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ActiveView, MediaSeason } from '../types';
 import { SEASONS, YEARS, SEARCH_DEBOUNCE_DELAY } from '../constants';
 import SearchIcon from './icons/SearchIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import CustomDropdown from './CustomDropdown';
-import XMarkIcon from './icons/XMarkIcon'; // Import XMarkIcon
+import XMarkIcon from './icons/XMarkIcon';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -45,8 +46,10 @@ const Header: React.FC<HeaderProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const searchIconRef = useRef<HTMLButtonElement>(null);
+  const searchIconRef = useRef<HTMLButtonElement>(null); // Added declaration for searchIconRef
+  const searchContainerRef = useRef<HTMLDivElement>(null); // Ref for the div wrapping search icon/form
+  // const formRef = useRef<HTMLFormElement>(null); // Optional: if form needs direct ref for click outside
+
   const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
 
   useEffect(() => {
@@ -71,6 +74,8 @@ const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Use searchContainerRef, as the form (even if fixed) is a DOM child of it
+      // or the icon is a child. This ensures clicking outside the conceptual "search area" closes it.
       if (isSearchActive &&
           searchContainerRef.current && 
           !searchContainerRef.current.contains(event.target as Node)) {
@@ -90,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchTerm); 
-    // handleCloseSearch(); // Optionally close search on submit
+    // handleCloseSearch(); // Optionally close search on submit, might be better to keep it open
   };
 
   const navButtonClass = (view: ActiveView) => 
@@ -110,7 +115,6 @@ const Header: React.FC<HeaderProps> = ({
       <div className="container mx-auto px-3 sm:px-4">
         <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-x-2 gap-y-2">
           
-          {/* Left Group: Logo & Title */}
           <div className="brand-header flex-shrink-0">
             <div 
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0"
@@ -124,8 +128,6 @@ const Header: React.FC<HeaderProps> = ({
             </h1>
           </div>
 
-          {/* Right Group: Nav, Controls, Search */}
-          {/* This group uses w-full on mobile (flex-wrap) to potentially drop to next line if space is tight, then becomes w-auto */}
           <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5 w-full sm:w-auto justify-end sm:justify-start order-1 sm:order-none">
             <nav className="flex items-center gap-x-0.5 sm:gap-x-1" aria-label="メインナビゲーション">
               <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
@@ -141,7 +143,7 @@ const Header: React.FC<HeaderProps> = ({
 
             {showSelectorsAndFilters && (
               <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5">
-                <div className="w-[5.5rem] sm:w-24 md:w-28 flex-shrink-0"> {/* Year: Adjusted width for better fit */}
+                <div className="w-[5.5rem] sm:w-24 md:w-28 flex-shrink-0">
                   <CustomDropdown
                     id="header-year-select"
                     options={yearOptions}
@@ -150,7 +152,7 @@ const Header: React.FC<HeaderProps> = ({
                     aria-label="放送年を選択"
                   />
                 </div>
-                <div className="w-[4.5rem] sm:w-20 md:w-24 flex-shrink-0"> {/* Season: Adjusted width for better fit */}
+                <div className="w-[4.5rem] sm:w-20 md:w-24 flex-shrink-0">
                   <CustomDropdown
                     id="header-season-select"
                     options={seasonOptions}
@@ -171,16 +173,17 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             )}
             
-            {/* Search Area - only shown if filters are shown (not on calendar) */}
             {showSelectorsAndFilters && (
               <div ref={searchContainerRef} className="relative flex items-center">
                 {isSearchActive ? (
-                  <form 
-                    onSubmit={handleSearchSubmit} 
-                    className="flex items-center bg-[#1a252f] border border-gray-600 rounded-md shadow-md sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2 md:static md:translate-y-0 md:shadow-none transition-all duration-300 ease-in-out z-20"
-                    // On small screens (not sm), it will be in flow. On sm, it becomes absolute. On md, static again.
-                    // Let's simplify: absolute on small screens, static on medium+
-                    style={isSearchActive && window.innerWidth < 768 ? { position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(100vw - 20px)', maxWidth: '300px',  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)'} : {}}
+                  <form
+                    onSubmit={handleSearchSubmit}
+                    // ref={formRef} // Optional: if form needs direct ref for click outside
+                    className={`
+                      flex items-center transition-all duration-300 ease-in-out
+                      fixed inset-x-0 top-0 h-16 bg-[#0f171e] shadow-xl justify-between px-3 z-[60]
+                      md:relative md:inset-auto md:top-auto md:h-auto md:bg-[#1a252f] md:border md:border-gray-600 md:rounded-md md:shadow-sm md:p-0 md:w-auto md:min-w-[200px] md:max-w-xs md:z-auto
+                    `}
                   >
                     <input
                       ref={searchInputRef}
@@ -190,18 +193,18 @@ const Header: React.FC<HeaderProps> = ({
                       value={searchTerm}
                       onChange={handleSearchInputChange}
                       onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); handleCloseSearch(); }}}
-                      className="bg-transparent text-white py-1.5 px-2.5 flex-grow min-w-0 w-28 xs:w-32 sm:w-32 md:w-36 lg:w-40 focus:outline-none placeholder-gray-400 text-xs" // Adjusted widths
+                      className="bg-transparent text-white flex-grow min-w-0 placeholder-gray-400 text-sm focus:outline-none py-2 px-2 md:py-1.5 md:px-2.5 md:text-xs"
                     />
-                    <button type="submit" className="p-1.5 text-gray-400 hover:text-[#00d4ff] focus:outline-none" aria-label="検索実行">
-                      <SearchIcon className="w-4 h-4" />
+                    <button type="submit" className="p-2 text-gray-400 hover:text-[#00d4ff] focus:outline-none md:p-1.5" aria-label="検索実行">
+                      <SearchIcon className="w-5 h-5 md:w-4 md:h-4" />
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={handleCloseSearch}
-                      className="p-1.5 text-gray-400 hover:text-white mr-1 focus:outline-none"
+                      className="p-2 text-gray-400 hover:text-white focus:outline-none md:p-1.5 md:mr-1"
                       aria-label="検索を閉じる"
                     >
-                      <XMarkIcon className="w-3 h-3" />
+                      <XMarkIcon className="w-5 h-5 md:w-4 md:h-4" />
                     </button>
                   </form>
                 ) : (
