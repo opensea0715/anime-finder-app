@@ -127,21 +127,21 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      {label && <label htmlFor={`${componentId}-button`} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>}
+      {label && <label htmlFor={`${componentId}-button`} className="block text-xs font-medium text-gray-300 mb-1">{label}</label>}
       <button
         id={`${componentId}-button`}
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
-        className="w-full flex items-center justify-between bg-[#1a252f] text-white border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f171e] focus-visible:ring-[#00d4ff] transition-colors duration-150"
+        className="w-full flex items-center justify-between bg-[#1a252f] text-white border border-gray-600 rounded-md py-1.5 px-2.5 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0f171e] focus-visible:ring-[#00d4ff] transition-colors duration-150"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
         aria-labelledby={label ? undefined : `${componentId}-button`} // If no external label, button labels itself
       >
         <span className="truncate">{selectedLabel}</span>
-        <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
+        <ChevronDownIcon className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
       </button>
       {isOpen && (
         <ul
@@ -159,7 +159,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               id={`${componentId}-option-${index}`}
               onClick={() => handleSelect(option.value, index)}
               onMouseOver={() => setFocusedOptionIndex(index)} // Optional: update focus on mouse over
-              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 text-white transition-colors duration-100 ${
+              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 text-white text-xs transition-colors duration-100 ${
                 index === focusedOptionIndex ? 'bg-[#00d4ff] text-[#0f171e]' : 'hover:bg-[#00aaff] hover:text-[#0f171e]'
               } ${
                 selectedValue === option.value && index !== focusedOptionIndex ? 'bg-[#0088cc] text-white font-semibold' : '' // Highlight selected if not focused
