@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLElement>(null);
-  const SCROLL_THRESHOLD = 5; // Minimum scroll distance to trigger change
+  const SCROLL_THRESHOLD = 5; 
 
   const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
 
@@ -82,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []); // Empty dependency array - runs once on mount
+  }, []); 
 
   const handleSearchIconClick = () => {
     setIsSearchActive(true);
@@ -90,7 +90,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleCloseSearch = useCallback(() => {
     setIsSearchActive(false);
-    // Restore focus to search icon if it's still mounted
     searchIconRef.current?.focus();
   }, []);
 
@@ -134,17 +133,18 @@ const Header: React.FC<HeaderProps> = ({
   const seasonOptions = SEASONS.map(s => ({ value: s.value, label: s.label }));
   
   const showSelectorsAndFilters = activeView !== 'calendar';
-
+  
   return (
     <header 
       ref={headerRef}
       className={`bg-[#141f2a] shadow-md sticky top-0 z-50 py-2.5 transform transition-transform duration-300 ease-in-out ${!isHeaderVisible ? '-translate-y-full' : 'translate-y-0'}`}
     >
       <div className="container mx-auto px-3 sm:px-4">
-        {/* Main content row: now flex-nowrap and scrollable on all sizes if needed */}
-        <div className="flex flex-nowrap items-center justify-between gap-x-3 overflow-x-auto scrollbar-hide sm:gap-x-4">
+        {/* Main flex container: column on mobile, row on desktop */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           
-          <div className="brand-header flex-shrink-0"> {/* Logo and Title container */}
+          {/* Left Part: Logo + Site Name */}
+          <div className="flex items-center flex-shrink-0 pb-2 md:pb-0"> {/* Added pb-2 md:pb-0 */}
             <div 
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0"
               role="img"
@@ -152,105 +152,109 @@ const Header: React.FC<HeaderProps> = ({
             >
               <span className="text-white text-lg sm:text-xl select-none">🗓️</span>
             </div>
-            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap">
+            <h1 className="brand-name text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mplus text-white whitespace-nowrap ml-3">
               <span className="text-[#00d4ff]">覇権</span>アニメさがせるくん
             </h1>
           </div>
 
-          {/* Controls Group: Navigation, Selectors, Filter, Search */}
-          {/* This group also needs to be flex-nowrap to prevent its internal items from wrapping if the group itself becomes too wide for its allocated space (though the parent scroll should handle most of it) */}
-          <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5 flex-shrink-0">
-            <nav className="flex items-center gap-x-0.5 sm:gap-x-1" aria-label="メインナビゲーション">
-              <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
-                ホーム
-              </button>
-              <button onClick={() => onViewChange('myList')} className={navButtonClass('myList')} aria-current={activeView === 'myList' ? 'page' : undefined}>
-                マイリスト
-              </button>
-              <button onClick={() => onViewChange('calendar')} className={navButtonClass('calendar')} aria-current={activeView === 'calendar' ? 'page' : undefined}>
-                放送カレンダー
-              </button>
-            </nav>
-
-            {showSelectorsAndFilters && (
-              <div className="flex items-center flex-nowrap gap-x-1 sm:gap-x-1.5"> {/* Inner group also nowrap */}
-                <div className="w-[5.5rem] sm:w-24 md:w-28 flex-shrink-0">
-                  <CustomDropdown
-                    id="header-year-select"
-                    options={yearOptions}
-                    selectedValue={selectedYear}
-                    onChange={(value) => onYearChange(value as number)}
-                    aria-label="放送年を選択"
-                  />
-                </div>
-                <div className="w-[4.5rem] sm:w-20 md:w-24 flex-shrink-0">
-                  <CustomDropdown
-                    id="header-season-select"
-                    options={seasonOptions}
-                    selectedValue={selectedSeason}
-                    onChange={(value) => onSeasonChange(value as MediaSeason)}
-                    aria-label="放送季節を選択"
-                  />
-                </div>
-                <button
-                  onClick={onToggleFilterPanel}
-                  className="text-xs font-medium bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-gray-900 px-2 sm:px-2.5 py-1.5 rounded-full flex items-center gap-0.5 sm:gap-1 transition-all duration-200 ease-in-out shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#141f2a] focus-visible:ring-orange-500 flex-shrink-0 whitespace-nowrap"
-                  aria-expanded={isFilterPanelOpen}
-                  aria-controls="filter-panel"
-                >
-                  絞込
-                  <ChevronDownIcon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+          {/* Right Part: Navigation, Selectors, Filters, Search (Scrollable on mobile) */}
+          <div className="relative flex items-center w-full md:w-auto md:justify-end"> {/* Scroll wrapper */}
+            <div 
+              className="flex items-center flex-nowrap overflow-x-auto scrollbar-hide scroll-smooth whitespace-nowrap gap-x-1.5 sm:gap-x-2 py-1 md:py-0 md:overflow-visible"
+              // Increased gap slightly for better touch targets on mobile scroll
+            >
+              <nav className="flex items-center gap-x-1 sm:gap-x-1.5" aria-label="メインナビゲーション">
+                <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
+                  ホーム
                 </button>
-              </div>
-            )}
-            
-            {showSelectorsAndFilters && (
-              <div ref={searchContainerRef} className="relative flex items-center flex-shrink-0"> {/* Search also flex-shrink-0 */}
-                {isSearchActive ? (
-                  <form
-                    onSubmit={handleSearchSubmit}
-                    className={`
-                      flex items-center transition-all duration-300 ease-in-out
-                      fixed inset-x-0 top-0 h-16 bg-[#0f171e] shadow-xl justify-between px-3 z-[60]
-                      md:relative md:inset-auto md:top-auto md:h-auto md:bg-[#1a252f] md:border md:border-gray-600 md:rounded-md md:shadow-sm md:p-0 md:w-auto md:min-w-[200px] md:max-w-xs md:z-auto
-                    `}
-                  >
-                    <input
-                      ref={searchInputRef}
-                      id="anime-search-input-active"
-                      type="search"
-                      placeholder="アニメを検索..."
-                      value={searchTerm}
-                      onChange={handleSearchInputChange}
-                      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); handleCloseSearch(); }}}
-                      className="bg-transparent text-white flex-grow min-w-0 placeholder-gray-400 text-sm focus:outline-none py-2 px-2 md:py-1.5 md:px-2.5 md:text-xs"
+                <button onClick={() => onViewChange('myList')} className={navButtonClass('myList')} aria-current={activeView === 'myList' ? 'page' : undefined}>
+                  マイリスト
+                </button>
+                <button onClick={() => onViewChange('calendar')} className={navButtonClass('calendar')} aria-current={activeView === 'calendar' ? 'page' : undefined}>
+                  放送カレンダー
+                </button>
+              </nav>
+
+              {showSelectorsAndFilters && (
+                <div className="flex items-center gap-x-1 sm:gap-x-1.5"> {/* This div is a direct child of scrollable area */}
+                  <div className="w-[5.5rem] sm:w-24 md:w-28 flex-shrink-0">
+                    <CustomDropdown
+                      id="header-year-select"
+                      options={yearOptions}
+                      selectedValue={selectedYear}
+                      onChange={(value) => onYearChange(value as number)}
+                      aria-label="放送年を選択"
                     />
-                    <button type="submit" className="p-2 text-gray-400 hover:text-[#00d4ff] focus:outline-none md:p-1.5" aria-label="検索実行">
-                      <SearchIcon className="w-5 h-5 md:w-4 md:h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCloseSearch}
-                      className="p-2 text-gray-400 hover:text-white focus:outline-none md:p-1.5 md:mr-1"
-                      aria-label="検索を閉じる"
-                    >
-                      <XMarkIcon className="w-5 h-5 md:w-4 md:h-4" />
-                    </button>
-                  </form>
-                ) : (
+                  </div>
+                  <div className="w-[4.5rem] sm:w-20 md:w-24 flex-shrink-0">
+                    <CustomDropdown
+                      id="header-season-select"
+                      options={seasonOptions}
+                      selectedValue={selectedSeason}
+                      onChange={(value) => onSeasonChange(value as MediaSeason)}
+                      aria-label="放送季節を選択"
+                    />
+                  </div>
                   <button
-                    ref={searchIconRef}
-                    onClick={handleSearchIconClick}
-                    className="p-1.5 text-gray-300 hover:text-white rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#141f2a] focus-visible:ring-[#00d4ff]"
-                    aria-label="アニメを検索"
+                    onClick={onToggleFilterPanel}
+                    className="text-xs font-medium bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-gray-900 px-2 sm:px-2.5 py-1.5 rounded-full flex items-center gap-0.5 sm:gap-1 transition-all duration-200 ease-in-out shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#141f2a] focus-visible:ring-orange-500 flex-shrink-0 whitespace-nowrap"
+                    aria-expanded={isFilterPanelOpen}
+                    aria-controls="filter-panel"
                   >
-                    <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    絞込
+                    <ChevronDownIcon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                   </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+                  
+                  <div ref={searchContainerRef} className="relative flex items-center flex-shrink-0">
+                    {isSearchActive ? (
+                      <form
+                        onSubmit={handleSearchSubmit}
+                        className={`
+                          flex items-center transition-all duration-300 ease-in-out
+                          fixed inset-x-0 top-0 h-16 bg-[#0f171e] shadow-xl justify-between px-3 z-[60]
+                          md:relative md:inset-auto md:top-auto md:h-auto md:bg-[#1a252f] md:border md:border-gray-600 md:rounded-md md:shadow-sm md:p-0 md:w-auto md:min-w-[120px] md:max-w-[180px] md:z-auto
+                        `}
+                      >
+                        <input
+                          ref={searchInputRef}
+                          id="anime-search-input-active"
+                          type="search"
+                          placeholder="検索..."
+                          value={searchTerm}
+                          onChange={handleSearchInputChange}
+                          onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); handleCloseSearch(); }}}
+                          className="bg-transparent text-white flex-grow min-w-0 placeholder-gray-400 text-sm focus:outline-none py-2 px-2 md:py-1.5 md:px-2.5 md:text-xs"
+                        />
+                        <button type="submit" className="p-2 text-gray-400 hover:text-[#00d4ff] focus:outline-none md:p-1.5" aria-label="検索実行">
+                          <SearchIcon className="w-5 h-5 md:w-4 md:h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCloseSearch}
+                          className="p-2 text-gray-400 hover:text-white focus:outline-none md:p-1.5 md:mr-1"
+                          aria-label="検索を閉じる"
+                        >
+                          <XMarkIcon className="w-5 h-5 md:w-4 md:h-4" />
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        ref={searchIconRef}
+                        onClick={handleSearchIconClick}
+                        className="p-1.5 text-gray-300 hover:text-white rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[#141f2a] focus-visible:ring-[#00d4ff]"
+                        aria-label="アニメを検索"
+                      >
+                        <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Mobile scroll hint - gradient overlay */}
+            <div className="absolute top-0 right-0 h-full w-10 bg-gradient-to-l from-[#141f2a] via-[#141f2a]/80 to-transparent pointer-events-none md:hidden z-10"></div>
+          </div> {/* End of Right Part / Scroll wrapper */}
+        </div> {/* End of Main flex container */}
       </div>
     </header>
   );
