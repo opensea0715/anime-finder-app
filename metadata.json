@@ -1,0 +1,6 @@
+{
+  "name": "覇権アニメさがせるくん",
+  "description": "AniList APIを利用して最新のアニメ情報を検索・閲覧し、お気に入り管理ができるウェブアプリケーションです。Prime Video風のダークテーマデザインを採用しています。",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

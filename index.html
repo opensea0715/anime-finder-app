@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja" style="scroll-behavior: smooth;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>覇権アニメさがせるくん</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background-color: #0f171e;
+      color: #ffffff;
+      min-height: 100vh; /* Ensure footer is at bottom */
+    }
+    .font-mplus { /* Ensure this class can be used if needed, but body style should cover it */
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1a252f;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #00d4ff;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00aaff;
+    }
+    
+    /* Utility to hide scrollbars */
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+
+
+    /* Basic styling for native select elements to fit the theme */
+    select {
+      background-color: #1a252f;
+      color: #ffffff;
+      border: 1px solid #4a5568; 
+      border-radius: 0.375rem; /* 6px */
+      padding: 0.5rem 0.75rem; /* py-2 px-3 */
+      appearance: none; 
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20fill%3D%22%23a0aec0%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1.25em;
+      padding-right: 2.5rem; 
+    }
+    /* Specific focus for native selects to maintain consistency with custom dropdowns */
+    select:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.4);
+    }
+    option {
+      background-color: #1a252f; 
+      color: #ffffff;
+    }
+    
+    /* For Tailwind JIT, ensure backdrop-filter utilities are recognized */
+    .backdrop-blur-lg { --tw-backdrop-blur: blur(16px); backdrop-filter: var(--tw-backdrop-filter); -webkit-backdrop-filter: var(--tw-backdrop-filter); }
+    .backdrop-blur-md { --tw-backdrop-blur: blur(12px); backdrop-filter: var(--tw-backdrop-filter); -webkit-backdrop-filter: var(--tw-backdrop-filter); }
+    .backdrop-blur-sm { --tw-backdrop-blur: blur(4px); backdrop-filter: var(--tw-backdrop-filter); -webkit-backdrop-filter: var(--tw-backdrop-filter); }
+
+    /* General focus style for custom interactive elements (non-native) */
+    *:focus-visible:not(select) {
+      outline: 2px solid #00d4ff !important;
+      outline-offset: 2px !important;
+      box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.3) !important;
+    }
+    
+    /* Brand Header CSS */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px; /* Provides spacing between logo and title */
+    }
+    .brand-name {
+      /* Tailwind classes will handle styling */
+    }
+
+    /* Filter Toggle Button CSS (was part of Controls Container) */
+    .filter-toggle-btn {
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      color: #1f2937; 
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease-in-out;
+    }
+    .filter-toggle-btn:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .filter-toggle-btn svg {
+       color: #1f2937; 
+    }
+    
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.3.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="font-mplus">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
