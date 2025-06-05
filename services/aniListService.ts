@@ -3,7 +3,7 @@ import { ANILIST_API_URL, ITEMS_PER_PAGE, CACHE_KEY_PREFIX } from '../constants'
 import { 
   AniListResponse, MediaSeason, MediaSort, FilterOptions, ScoreRangeOption, 
   MediaStatus, AniListMedia, FetchAnimeParams, MediaFormat,
-  AiringScheduleResponse, FetchAiringScheduleParams, AiringSort // Added AiringSort
+  AiringScheduleResponse, FetchAiringScheduleParams, AiringSort
 } from '../types';
 
 const ANIME_QUERY = `
@@ -261,16 +261,13 @@ const fetchGraphQL = async <T>(query: string, variables: any, cacheKey: string):
     let detailedMessage = 'GraphQLデータの取得中に不明なエラーが発生しました。';
 
     if (error instanceof Error) {
-      // The error.message should now be one of the user-friendly messages from above.
-      // The "Failed to fetch" case remains important for true network failures.
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
         detailedMessage = 'ネットワーク接続に問題があるか、ブラウザのセキュリティポリシー (CORS等) によりリクエストがブロックされた可能性があります。お使いのネットワーク環境を確認し、ブラウザの開発者コンソールで詳細なエラーを確認してください。ローカルファイル (file://) からアクセスしている場合、Webサーバー経由でのアクセスをお試しください。';
       } else {
-        detailedMessage = error.message; // This will now be the improved message from the blocks above
+        detailedMessage = error.message; 
       }
       console.error(`Error details: name=${error.name}, message=${error.message}, type=${error.constructor.name}`);
     }
-    // Ensure the returned structure mimics a GraphQL error response for consistent handling in App.tsx
     return { errors: [{ message: detailedMessage }] } as unknown as T;
   }
 };
@@ -283,7 +280,7 @@ export const fetchAnime = async (params: FetchAnimeParams): Promise<AniListRespo
     season, 
     seasonYear, 
     search, 
-    sort = [MediaSort.POPULARITY_DESC],
+    sort, // Removed default sort: [MediaSort.POPULARITY_DESC]
     ids,
     genre_in,
     format_in,
@@ -293,7 +290,11 @@ export const fetchAnime = async (params: FetchAnimeParams): Promise<AniListRespo
     filtersForNoneScore, 
   } = params;
 
-  const variables: any = { page, perPage, sort };
+  const variables: any = { page, perPage };
+  if (sort) { // Only add sort to variables if it's provided
+    variables.sort = sort;
+  }
+
 
   if (search) variables.search = search;
   if (ids && ids.length > 0) variables.id_in = ids;

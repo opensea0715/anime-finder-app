@@ -4,14 +4,14 @@ import Header from './components/Header';
 import LoadingSpinner from './components/LoadingSpinner';
 import FilterControls from './components/FilterControls';
 import AnimeDetailModal from './components/AnimeDetailModal';
-import AnimeSection from './components/AnimeSection'; 
-import AiringNowList from './components/AiringNowList'; // New component for airing now list
+import AnimeSection from './components/AnimeSection';
+import AiringNowList from './components/AiringNowList';
 import BroadcastCalendar from './components/BroadcastCalendar';
 import { fetchAnime, fetchAiringSchedule } from './services/aniListService';
-import { 
-  AniListMedia, MediaSeason, ActiveView, MediaSort, FilterOptions, 
+import {
+  AniListMedia, MediaSeason, ActiveView, MediaSort, FilterOptions,
   AniListPageInfo, AnimeSectionData, FetchAnimeSectionParams, MediaFormat, FetchAnimeParams,
-  AiringScheduleEntry, AiringSort, MediaStatus 
+  AiringScheduleEntry, AiringSort, MediaStatus
 } from './types';
 import { useFavorites } from './hooks/useFavorites';
 import { ITEMS_PER_SECTION, ITEMS_PER_PAGE, SCORE_RANGES, SEASONS as APP_SEASONS, STATUS_MAP } from './constants';
@@ -21,10 +21,10 @@ const getCurrentSeasonAndYear = (): { season: MediaSeason; year: number } => {
   const month = now.getMonth();
   const year = now.getFullYear();
   let season: MediaSeason;
-  if (month <= 2) season = MediaSeason.WINTER; 
-  else if (month <= 5) season = MediaSeason.SPRING; 
-  else if (month <= 8) season = MediaSeason.SUMMER; 
-  else season = MediaSeason.FALL; 
+  if (month <= 2) season = MediaSeason.WINTER;
+  else if (month <= 5) season = MediaSeason.SPRING;
+  else if (month <= 8) season = MediaSeason.SUMMER;
+  else season = MediaSeason.FALL;
   return { season, year };
 };
 
@@ -32,7 +32,7 @@ const initialFilterOptions: FilterOptions = {
   genres: [],
   scoreRange: 'any',
   status: 'any',
-  sort: MediaSort.POPULARITY_DESC, 
+  sort: MediaSort.POPULARITY_DESC,
 };
 
 const App: React.FC = () => {
@@ -40,8 +40,8 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterOptions, setFilterOptions] = useState<FilterOptions>(initialFilterOptions);
-  
-  const [favorites, toggleFavorite, isFavorite] = useFavorites();
+
+  const [favorites, toggleFavorite, isFavorite] = useFavorites(); // favorites is now string[]
   const [selectedAnimeForModal, setSelectedAnimeForModal] = useState<AniListMedia | null>(null);
   const [modalTriggerRef, setModalTriggerRef] = useState<HTMLElement | null>(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState<boolean>(false);
@@ -54,101 +54,156 @@ const App: React.FC = () => {
   const [calendarLoading, setCalendarLoading] = useState<boolean>(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
 
+  const processErrorForDisplay = useCallback((error: any, sectionId: string): string => {
+    let displayErrorMessage = 'データの読み込み中に予期せぬエラーが発生しました。';
+    if (typeof error === 'string' && error.trim() !== '') {
+      displayErrorMessage = error;
+    } else if (error instanceof Error) {
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        displayErrorMessage = 'ネットワーク接続に問題があるか、サーバーに到達できませんでした。接続を確認し、再試行してください。';
+        console.warn(`Fallback 'Failed to fetch' handler in App.tsx's processErrorForDisplay for section ${sectionId}. This suggests loadSectionData's error handling might have been bypassed or the error originated elsewhere.`);
+      } else {
+        displayErrorMessage = error.message || `データの読み込みに失敗しました (${sectionId} - 詳細不明)。`;
+      }
+    } else {
+       console.error(`Fallback error processing in App.tsx for section ${sectionId} (unknown error type):`, error);
+    }
+    return displayErrorMessage;
+  }, []);
+
 
   const loadSectionData = useCallback(async (
     sectionDefinition: FetchAnimeSectionParams,
     globalFilters: FilterOptions,
     globalSearchTerm: string,
-    currentGlobalYear: number, 
-    currentGlobalSeason: MediaSeason, 
+    currentGlobalYear: number,
+    currentGlobalSeason: MediaSeason,
     isMyListSection: boolean = false,
-    favoriteIdsForMyList: number[] = [],
-    pageForPagination: number = 1 
+    favoriteIdsForMyList: string[] = [], // Now expects string[]
+    pageForPagination: number = 1
   ): Promise<Partial<AnimeSectionData>> => {
-    
-    const effectivePerPage = (sectionDefinition.id === 'myList' || sectionDefinition.id === 'searchResults') 
-      ? ITEMS_PER_PAGE 
+
+    const effectivePerPage = (sectionDefinition.id === 'myList' || sectionDefinition.id === 'searchResults')
+      ? ITEMS_PER_PAGE
       : sectionDefinition.perPage || ITEMS_PER_SECTION;
-    const effectiveSort = sectionDefinition.sort?.[0] || globalFilters.sort;
+
+    const baseSort = sectionDefinition.sort?.[0] || globalFilters.sort;
+    const initialSortParam = baseSort ? [baseSort] : undefined;
 
     let serviceParams: FetchAnimeParams = {
       page: pageForPagination,
       perPage: effectivePerPage,
-      sort: [effectiveSort], // Sorting is applied to MyList as well
-      scoreRanges: SCORE_RANGES, // Informational for fetchAnime, not a direct filter here
+      sort: initialSortParam,
+      scoreRanges: SCORE_RANGES,
     };
 
     if (isMyListSection) {
-      if (favoriteIdsForMyList.length === 0) {
+      console.log('[loadSectionData] MyList: favoriteIdsForMyList (string[]) before API call:', JSON.parse(JSON.stringify(favoriteIdsForMyList)));
+      
+      const numericFavoriteIds = favoriteIdsForMyList
+        .map(idStr => parseInt(idStr, 10))
+        .filter(idNum => !isNaN(idNum));
+
+      if (numericFavoriteIds.length === 0) {
+        console.log('[loadSectionData] MyList: No valid numeric favorites, returning empty section.');
         return { items: [], isLoading: false, error: null, pageInfo: { total: 0, currentPage: 1, hasNextPage: false, perPage: effectivePerPage } };
       }
-      serviceParams.ids = favoriteIdsForMyList;
-      // For MyList, other global filters (genre, status, score) are NOT applied.
-      // Only sort and explicit IDs.
-    } else if (globalSearchTerm) { 
+      serviceParams.ids = numericFavoriteIds; // API expects number[]
+      serviceParams.sort = undefined;
+      serviceParams.search = undefined;
+      serviceParams.season = undefined;
+      serviceParams.seasonYear = undefined;
+      serviceParams.genre_in = undefined;
+      serviceParams.format_in = undefined;
+      serviceParams.status_in = undefined;
+      serviceParams.averageScore_greater = undefined;
+      serviceParams.averageScore_lesser = undefined;
+      serviceParams.filtersForNoneScore = undefined;
+
+    } else if (globalSearchTerm) {
       serviceParams.search = globalSearchTerm;
       if (globalFilters.genres.length > 0) {
         serviceParams.genre_in = globalFilters.genres;
       }
-      // If a section (like "selectedPeriod") is searchable AND has specific time params, they should be used.
-      // Otherwise, search is global across time unless specific year/season is part of the search query itself (which AniList might support).
-      // For now, specific year/season for sectionDefinition is only applied if it's not a global search, or if section implies it.
-      if (sectionDefinition.season && sectionDefinition.seasonYear && sectionDefinition.id === 'selectedPeriod') { 
-        serviceParams.season = sectionDefinition.season;
-        serviceParams.seasonYear = sectionDefinition.seasonYear;
-      }
-      // Status and Score filters will be applied below for search as well
-    } else { // Regular home sections (not MyList, not search)
+    } else {
       serviceParams.season = sectionDefinition.season || currentGlobalSeason;
       serviceParams.seasonYear = sectionDefinition.seasonYear || currentGlobalYear;
-      
+
       if (sectionDefinition.genre_in && sectionDefinition.genre_in.length > 0) {
-        serviceParams.genre_in = sectionDefinition.genre_in; // Section-specific genres
+        serviceParams.genre_in = sectionDefinition.genre_in;
       }
       if (sectionDefinition.format_in && sectionDefinition.format_in.length > 0) {
         serviceParams.format_in = sectionDefinition.format_in;
       }
       if (sectionDefinition.status_in && sectionDefinition.status_in.length > 0) {
-        serviceParams.status_in = sectionDefinition.status_in; // Section-specific status
+        serviceParams.status_in = sectionDefinition.status_in;
       }
-      // Status and Score filters from globalFilters will be applied below if not already set by sectionDefinition
     }
 
-    // Apply global filters like status and score range, *unless* it's MyList.
-    // For search results, these global filters should also apply.
     if (!isMyListSection) {
-        // Apply global status filter if not already set by section definition (for home sections) or search
         if (globalFilters.status !== 'any' && !serviceParams.status_in) {
           serviceParams.status_in = [globalFilters.status];
         }
-
-        // Apply global score range filter
         if (globalFilters.scoreRange === 'none') {
           serviceParams.filtersForNoneScore = { scoreRange: 'none' };
+          serviceParams.averageScore_greater = undefined;
+          serviceParams.averageScore_lesser = undefined;
         } else if (globalFilters.scoreRange !== 'any') {
           const selectedRange = SCORE_RANGES.find(r => r.value === globalFilters.scoreRange);
           if (selectedRange) {
-            if (selectedRange.minScore !== undefined) serviceParams.averageScore_greater = selectedRange.minScore - 1; // AniList score_greater is exclusive
-            if (selectedRange.maxScore !== undefined) serviceParams.averageScore_lesser = selectedRange.maxScore + 1; // AniList score_lesser is exclusive
+            serviceParams.averageScore_greater = selectedRange.minScore !== undefined ? selectedRange.minScore -1 : undefined;
+            serviceParams.averageScore_lesser = selectedRange.maxScore !== undefined ? selectedRange.maxScore + 1 : undefined;
+            serviceParams.filtersForNoneScore = undefined;
           }
+        } else {
+            serviceParams.averageScore_greater = undefined;
+            serviceParams.averageScore_lesser = undefined;
+            serviceParams.filtersForNoneScore = undefined;
         }
-        // Global genre filters are applied to search explicitly. For home sections, section-specific genres are used.
+        if (!globalSearchTerm && globalFilters.genres.length > 0 && !serviceParams.genre_in) {
+            serviceParams.genre_in = globalFilters.genres;
+        }
     }
-    
+
     try {
+      console.log(`[loadSectionData] Fetching section '${sectionDefinition.id}'. API Request Params:`, JSON.parse(JSON.stringify(serviceParams)));
       const response = await fetchAnime(serviceParams);
+      console.log(`[loadSectionData] API response for section '${sectionDefinition.id}':`, response.data ? JSON.parse(JSON.stringify(response.data.Page)) : response.errors);
 
       if (response.data?.Page) {
-        return { items: response.data.Page.media, error: null, pageInfo: response.data.Page.pageInfo };
+        let fetchedMedia = response.data.Page.media;
+        const fetchedPageInfo = response.data.Page.pageInfo;
+
+        if (isMyListSection && favoriteIdsForMyList && favoriteIdsForMyList.length > 0) {
+          console.log(`[loadSectionData] MyList: Before client-side filter. Fetched media count: ${fetchedMedia.length}. Favorite IDs for filter (string[]):`, JSON.parse(JSON.stringify(favoriteIdsForMyList)));
+          const clientFilteredMedia = fetchedMedia.filter(anime =>
+            favoriteIdsForMyList.includes(String(anime.id)) // Compare string with string
+          );
+          console.log(`[loadSectionData] MyList: After client-side filter. Filtered media count: ${clientFilteredMedia.length}. Filtered list:`, JSON.parse(JSON.stringify(clientFilteredMedia.map(m => ({id: m.id, title: m.title.romaji})))));
+          fetchedMedia = clientFilteredMedia;
+        }
+        return { items: fetchedMedia, error: null, pageInfo: fetchedPageInfo };
       } else if (response.errors) {
         const errorMessages = response.errors.map(e => e.message).join(', ');
+        console.error(`[loadSectionData] API error for section '${sectionDefinition.id}':`, errorMessages);
         return { items: [], error: errorMessages, pageInfo: null };
       }
+      console.error(`[loadSectionData] Invalid API response for section '${sectionDefinition.id}'.`);
       return { items: [], error: 'APIからの応答が不正です。', pageInfo: null };
-    } catch (err) { // This catch is for unexpected errors during the process, not GraphQL errors from response.
-      const errorMessage = err instanceof Error ? err.message : 'データの取得処理中に不明なエラーが発生しました。';
-      console.error(`Error in loadSectionData internal try-catch for section ${sectionDefinition.id}:`, err);
-      return { items: [], error: errorMessage, pageInfo: null };
+    } catch (err) {
+      let detailedErrorMessage = 'データの取得処理中に不明なエラーが発生しました。';
+      if (err instanceof Error) {
+        if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+          // Provide the same detailed "Failed to fetch" message as in fetchGraphQL
+          detailedErrorMessage = 'ネットワーク接続に問題があるか、ブラウザのセキュリティポリシー (CORS等) によりリクエストがブロックされた可能性があります。お使いのネットワーク環境を確認し、ブラウザの開発者コンソールで詳細なエラーを確認してください。ローカルファイル (file://) からアクセスしている場合、Webサーバー経由でのアクセスをお試しください。';
+        } else {
+          detailedErrorMessage = err.message;
+        }
+      } else if (typeof err === 'string') {
+        detailedErrorMessage = err;
+      }
+      console.error(`[loadSectionData] Catch block error for section '${sectionDefinition.id}':`, err, 'Processed error message:', detailedErrorMessage);
+      return { items: [], error: detailedErrorMessage, pageInfo: null };
     }
   }, []);
 
@@ -158,9 +213,9 @@ const App: React.FC = () => {
 
     const today = new Date();
     const currentDayOfWeek = today.getDay();
-    
+
     const monday = new Date(today);
-    monday.setDate(today.getDate() - (currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1)); 
+    monday.setDate(today.getDate() - (currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1));
     monday.setHours(0, 0, 0, 0);
 
     const sunday = new Date(monday);
@@ -174,13 +229,13 @@ const App: React.FC = () => {
       let allSchedules: AiringScheduleEntry[] = [];
       let currentPage = 1;
       let hasNextPage = true;
-      const perPage = 50; 
+      const perPage = 50;
 
-      while(hasNextPage && currentPage <= 3) { 
-        const response = await fetchAiringSchedule({ 
-          airingAt_greater, 
-          airingAt_lesser, 
-          sort: [AiringSort.TIME], 
+      while(hasNextPage && currentPage <= 3) { // Limit to 3 pages to avoid excessive calls
+        const response = await fetchAiringSchedule({
+          airingAt_greater,
+          airingAt_lesser,
+          sort: [AiringSort.TIME],
           page: currentPage,
           perPage: perPage,
         });
@@ -190,7 +245,7 @@ const App: React.FC = () => {
           hasNextPage = response.data.Page.pageInfo?.hasNextPage || false;
           currentPage++;
         } else {
-          hasNextPage = false; 
+          hasNextPage = false;
           if (response.errors) {
             throw new Error(response.errors.map(e => e.message).join(', '));
           }
@@ -201,7 +256,7 @@ const App: React.FC = () => {
       const errorMessage = err instanceof Error ? err.message : 'カレンダーデータの取得中にエラーが発生しました。';
       console.error('Error loading calendar data:', err);
       setCalendarError(errorMessage);
-      setCalendarSchedule([]); 
+      setCalendarSchedule([]);
     } finally {
       setCalendarLoading(false);
     }
@@ -212,35 +267,15 @@ const App: React.FC = () => {
     const currentYearToDisplay = selectedGlobalYear || initialYear;
     const currentSeasonToDisplay = selectedGlobalSeason || initialSeason;
 
-    const processErrorForDisplay = (error: any, sectionId: string): string => {
-      let displayErrorMessage = 'データの読み込み中に予期せぬエラーが発生しました。';
-      if (error instanceof Error) {
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-          // This is a fallback. The detailed message should come from aniListService.
-          displayErrorMessage = 'ネットワーク接続に問題があるか、サーバーに到達できませんでした。接続を確認し、再試行してください。';
-          console.warn(`Fallback 'Failed to fetch' handler in App.tsx for section ${sectionId}. This suggests aniListService's detailed message might have been bypassed.`);
-        } else {
-          displayErrorMessage = error.message || `データの読み込みに失敗しました (${sectionId} - 詳細不明)。`;
-        }
-      } else if (typeof error === 'string' && error.trim() !== '') {
-        displayErrorMessage = error;
-      }
-      // Log the original error for debugging if it's not the standard string from loadSectionData
-      if (!(typeof error === 'string')) {
-        console.error(`Fallback error processing in App.tsx for section ${sectionId}:`, error);
-      }
-      return displayErrorMessage;
-    };
-
+    console.log('[App useEffect] Triggered. ActiveView:', activeView, 'SearchTerm:', searchTerm, 'Favorites (string[]):', JSON.parse(JSON.stringify(favorites)), 'Filters:', filterOptions);
 
     if (searchTerm.trim() !== '') {
       const searchResultsSectionDefinition: FetchAnimeSectionParams = {
         id: 'searchResults',
-        sort: [filterOptions.sort], 
         perPage: ITEMS_PER_PAGE,
-        search: searchTerm, 
+        search: searchTerm,
       };
-      
+
       const areFiltersActive = filterOptions.genres.length > 0 || filterOptions.status !== 'any' || filterOptions.scoreRange !== 'any';
       const sectionTitle = `「${searchTerm}」の検索結果 ${areFiltersActive ? '(絞り込みあり)' : ''}`;
 
@@ -251,54 +286,88 @@ const App: React.FC = () => {
         items: [],
         isLoading: true,
         error: null,
-        pageInfo: { currentPage: 0, hasNextPage: true, perPage: ITEMS_PER_PAGE, total: 0 } 
+        pageInfo: { currentPage: 0, hasNextPage: true, perPage: ITEMS_PER_PAGE, total: 0 }
       }]);
 
       loadSectionData(
         searchResultsSectionDefinition,
-        filterOptions, 
+        filterOptions,
         searchTerm,
-        currentYearToDisplay, 
+        currentYearToDisplay,
         currentSeasonToDisplay,
-        false, 
-        [],    
-        1 
+        false,
+        [], 
+        1
       ).then(data => {
-        setSections(prevSections => prevSections.map(s => 
+        setSections(prevSections => prevSections.map(s =>
           s.id === 'searchResults' ? { ...s, ...data, isLoading: false, title: sectionTitle, error: data.error ? processErrorForDisplay(data.error, 'searchResults') : null } : s
         ));
-      }).catch(rawError => { // Catch for if loadSectionData itself rejects (should be rare)
+      }).catch(rawError => {
         const displayError = processErrorForDisplay(rawError, 'searchResults');
-        setSections(prevSections => prevSections.map(s => 
-            s.id === 'searchResults' ? { 
-                ...s, 
-                isLoading: false, 
+        setSections(prevSections => prevSections.map(s =>
+            s.id === 'searchResults' ? {
+                ...s,
+                isLoading: false,
                 error: displayError,
-                title: sectionTitle 
+                title: sectionTitle
             } : s
         ));
       });
 
     } else if (activeView === 'calendar') {
-      setSections([]); 
-      setIsFilterPanelOpen(false); 
+      setSections([]);
+      setIsFilterPanelOpen(false);
       loadCalendarData();
-    } else {
-      // Home or MyList view
+    } else if (activeView === 'myList') {
+      const myListSectionDefinition: FetchAnimeSectionParams = {
+        id: 'myList',
+        perPage: ITEMS_PER_PAGE,
+      };
+      setSections([{
+        id: myListSectionDefinition.id,
+        title: 'マイリスト',
+        fetchParams: myListSectionDefinition,
+        items: [],
+        isLoading: true,
+        error: null,
+        pageInfo: { currentPage: 0, hasNextPage: true, perPage: ITEMS_PER_PAGE, total: 0 },
+      }]);
+
+      console.log(`[App useEffect] MyList View: Loading with favorites (string[]):`, JSON.parse(JSON.stringify(favorites)));
+      loadSectionData(
+        myListSectionDefinition,
+        initialFilterOptions, 
+        '', 
+        currentYearToDisplay, 
+        currentSeasonToDisplay, 
+        true, 
+        favorites, 
+        1 
+      ).then(data => {
+        setSections(prevSections => prevSections.map(s =>
+          s.id === 'myList' ? { ...s, ...data, isLoading: false, error: data.error ? processErrorForDisplay(data.error, 'myList') : null, title: 'マイリスト' } : s
+        ));
+      }).catch(rawError => {
+        const displayError = processErrorForDisplay(rawError, 'myList');
+        setSections(prevSections => prevSections.map(s =>
+          s.id === 'myList' ? { ...s, isLoading: false, error: displayError, title: 'マイリスト' } : s
+        ));
+      });
+    } else { // Home View
       const homeSectionDefinitions: FetchAnimeSectionParams[] = [
-        { 
-          id: 'selectedPeriod', 
-          season: currentSeasonToDisplay, 
-          seasonYear: currentYearToDisplay, 
-          sort: [MediaSort.POPULARITY_DESC], 
-          perPage: ITEMS_PER_SECTION 
+        {
+          id: 'selectedPeriod',
+          season: currentSeasonToDisplay,
+          seasonYear: currentYearToDisplay,
+          sort: [MediaSort.POPULARITY_DESC],
+          perPage: ITEMS_PER_SECTION
         },
-        { 
+        {
           id: 'airingNowList',
           season: currentSeasonToDisplay,
           seasonYear: currentYearToDisplay,
-          status_in: [MediaStatus.RELEASING], 
-          sort: [MediaSort.POPULARITY_DESC], 
+          status_in: [MediaStatus.RELEASING],
+          sort: [MediaSort.POPULARITY_DESC],
           perPage: 50, 
         },
         { id: 'trending', sort: [MediaSort.TRENDING_DESC], perPage: ITEMS_PER_SECTION },
@@ -318,17 +387,11 @@ const App: React.FC = () => {
         romance: '胸キュン恋愛アニメ',
         action: '熱血バトルアクション',
         moviesSpecials: '劇場版・スペシャル',
-        myList: 'マイリスト',
-        airingNowList: '今期放送中のアニメ一覧', 
-      };
-      
-      const myListSectionDefinition: FetchAnimeSectionParams = {
-        id: 'myList', sort: [filterOptions.sort], perPage: ITEMS_PER_PAGE 
+        airingNowList: '今期放送中のアニメ一覧',
       };
 
-      const activeSectionDefinitions = activeView === 'home' ? homeSectionDefinitions : [myListSectionDefinition];
-
-      setSections(activeSectionDefinitions.map(def => {
+      console.log(`[App useEffect] Setting initial sections for HOME view. Definitions count: ${homeSectionDefinitions.length}`);
+      setSections(homeSectionDefinitions.map(def => {
         let title = sectionTitles[def.id] || 'セクション';
         if (def.id === 'selectedPeriod') {
           const seasonLabel = APP_SEASONS.find(s => s.value === currentSeasonToDisplay)?.label || '';
@@ -341,28 +404,31 @@ const App: React.FC = () => {
           items: [],
           isLoading: true,
           error: null,
-          pageInfo: null,
+          pageInfo: def.id === 'airingNowList'
+            ? { currentPage: 0, hasNextPage: true, perPage: def.perPage || ITEMS_PER_PAGE, total: 0 }
+            : null,
         };
       }));
 
-      activeSectionDefinitions.forEach(def => {
+      homeSectionDefinitions.forEach(def => {
+        console.log(`[App useEffect] Home: Initiating load for section: '${def.id}'.`);
         loadSectionData(
           def,
-          filterOptions, 
-          searchTerm,    
-          currentYearToDisplay, 
-          currentSeasonToDisplay, 
-          def.id === 'myList', 
-          def.id === 'myList' ? favorites : [], 
-          1 
+          filterOptions,
+          '', 
+          currentYearToDisplay,
+          currentSeasonToDisplay,
+          false, 
+          [], 
+          1
         ).then(data => {
           setSections(prevSections => prevSections.map(s => s.id === def.id ? { ...s, ...data, isLoading: false, error: data.error ? processErrorForDisplay(data.error, def.id) : null } : s));
-        }).catch(rawError => { // Catch for if loadSectionData itself rejects
+        }).catch(rawError => {
           const displayError = processErrorForDisplay(rawError, def.id);
-          setSections(prevSections => prevSections.map(s => 
-              s.id === def.id ? { 
-                  ...s, 
-                  isLoading: false, 
+          setSections(prevSections => prevSections.map(s =>
+              s.id === def.id ? {
+                  ...s,
+                  isLoading: false,
                   error: displayError
               } : s
           ));
@@ -370,7 +436,7 @@ const App: React.FC = () => {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, searchTerm, filterOptions, favorites, loadSectionData, selectedGlobalYear, selectedGlobalSeason, loadCalendarData]); // Removed initialYear, initialSeason as they don't change
+  }, [activeView, searchTerm, filterOptions, favorites, selectedGlobalYear, selectedGlobalSeason, loadCalendarData, loadSectionData, processErrorForDisplay]); // Added processErrorForDisplay to deps
 
   const handleLoadMore = useCallback(async (sectionId: 'myList' | 'searchResults') => {
     const targetSection = sections.find(s => s.id === sectionId);
@@ -381,16 +447,18 @@ const App: React.FC = () => {
     const nextPage = (targetSection.pageInfo?.currentPage || 0) + 1;
     setSections(prev => prev.map(s => s.id === sectionId ? {...s, isLoading: true} : s));
 
-    const currentSearchTermForLoad = sectionId === 'searchResults' ? targetSection.fetchParams.search || '' : '';
-    
+    const currentSearchTermForLoadMore = sectionId === 'searchResults' ? searchTerm : '';
+    const currentFavoritesForLoadMore = sectionId === 'myList' ? favorites : [];
+
+
     loadSectionData(
-      targetSection.fetchParams, 
-      filterOptions,            
-      currentSearchTermForLoad, 
+      targetSection.fetchParams,
+      filterOptions, 
+      currentSearchTermForLoadMore,
       selectedGlobalYear,
       selectedGlobalSeason,
-      sectionId === 'myList',   
-      sectionId === 'myList' ? favorites : [], 
+      sectionId === 'myList',
+      currentFavoritesForLoadMore, 
       nextPage
     ).then(data => {
       setSections(prevSections => prevSections.map(s => {
@@ -399,7 +467,7 @@ const App: React.FC = () => {
             ...s,
             items: [...s.items, ...(data.items || [])],
             pageInfo: data.pageInfo,
-            error: data.error, // Assume error from loadSectionData is already processed if needed
+            error: data.error ? processErrorForDisplay(data.error, sectionId) : null,
             isLoading: false
           };
         }
@@ -407,23 +475,26 @@ const App: React.FC = () => {
       }));
     }).catch(error => {
       console.error(`Error loading more for ${sectionId}:`, error);
-      // Simplified error handling for loadMore, primary error should be on initial load
+      const displayError = processErrorForDisplay(error, sectionId);
       setSections(prevSections => prevSections.map(s =>
         s.id === sectionId ? {
           ...s,
           isLoading: false,
-          error: error instanceof Error ? error.message : '続きのデータの読み込みに失敗しました。'
+          error: displayError
         } : s
       ));
     });
-  }, [sections, loadSectionData, filterOptions, selectedGlobalYear, selectedGlobalSeason, favorites]);
+  }, [sections, loadSectionData, filterOptions, selectedGlobalYear, selectedGlobalSeason, favorites, searchTerm, processErrorForDisplay]);
 
 
   const handleViewChange = (view: ActiveView) => {
     setActiveView(view);
-    setSearchTerm(''); 
+    setSearchTerm('');
     if (view !== 'calendar') {
-        setCalendarSchedule([]); 
+        setCalendarSchedule([]);
+    }
+    if (view === 'myList' || view === 'calendar') {
+      setIsFilterPanelOpen(false);
     }
   };
 
@@ -436,7 +507,7 @@ const App: React.FC = () => {
   };
 
   const handleToggleFilterPanel = () => {
-    if (activeView !== 'calendar') { 
+    if (activeView !== 'calendar') {
         setIsFilterPanelOpen(prev => !prev);
     }
   };
@@ -448,18 +519,17 @@ const App: React.FC = () => {
 
   const closeModal = () => {
     setSelectedAnimeForModal(null);
-    modalTriggerRef?.focus();
   };
 
   const handleYearChange = (year: number) => {
     setSelectedGlobalYear(year);
-    if (activeView !== 'home' && searchTerm.trim() === '') setActiveView('home'); 
+    if (activeView !== 'home' && searchTerm.trim() === '') setActiveView('home');
   };
   const handleSeasonChange = (season: MediaSeason) => {
     setSelectedGlobalSeason(season);
-     if (activeView !== 'home' && searchTerm.trim() === '') setActiveView('home'); 
+     if (activeView !== 'home' && searchTerm.trim() === '') setActiveView('home');
   };
-  
+
   const overallIsLoading = sections.some(s => s.isLoading && s.items.length === 0) && activeView !== 'calendar' && searchTerm.trim() === '';
 
   return (
@@ -476,28 +546,28 @@ const App: React.FC = () => {
         onSeasonChange={handleSeasonChange}
       />
       <main className="flex-grow container mx-auto px-2 sm:px-4 pt-0 pb-4 section-container">
-        {activeView !== 'calendar' && searchTerm.trim() === '' && ( 
-          <FilterControls
-            currentFilters={filterOptions}
-            onFilterChange={handleFilterChange}
-            isFilterPanelOpen={isFilterPanelOpen}
-          />
+        {(activeView !== 'calendar' && (searchTerm.trim() !== '' || isFilterPanelOpen)) && (
+            <FilterControls
+                currentFilters={filterOptions}
+                onFilterChange={handleFilterChange}
+                isFilterPanelOpen={isFilterPanelOpen}
+            />
         )}
-        {searchTerm.trim() !== '' && ( // Show filters also on search results page
-           <FilterControls
-            currentFilters={filterOptions}
-            onFilterChange={handleFilterChange}
-            isFilterPanelOpen={isFilterPanelOpen} 
-          />
+        {(activeView === 'home' && searchTerm.trim() === '' && isFilterPanelOpen) && (
+             <FilterControls
+                currentFilters={filterOptions}
+                onFilterChange={handleFilterChange}
+                isFilterPanelOpen={isFilterPanelOpen}
+            />
         )}
-        
+
         {activeView === 'calendar' ? (
           <BroadcastCalendar
             schedule={calendarSchedule}
             isLoading={calendarLoading}
             error={calendarError}
             onCardClick={handleCardClick}
-            onToggleFavorite={toggleFavorite} 
+            onToggleFavorite={toggleFavorite}
             isFavorite={isFavorite}
           />
         ) : (
@@ -508,14 +578,13 @@ const App: React.FC = () => {
               <p className="text-center text-gray-400 py-10">マイリストにはまだ何も登録されていません。</p>
             )}
 
-            {!overallIsLoading && 
-              sections.every(s => !s.isLoading && s.items.length === 0 && !s.error) && 
+            {!overallIsLoading &&
+              sections.every(s => !s.isLoading && s.items.length === 0 && !s.error) &&
               !(activeView === 'myList' && favorites.length === 0 && searchTerm.trim() === '') && (
               <p className="text-center text-gray-400 py-10">該当するアニメが見つかりませんでした。検索条件やフィルターをご確認ください。</p>
             )}
-            
+
             {sections.map(section => {
-              // Skip AiringNowList if there's an active search term
               if (section.id === 'airingNowList' && searchTerm.trim() !== '') {
                 return null;
               }
@@ -525,38 +594,38 @@ const App: React.FC = () => {
                     key={section.id}
                     title={section.title}
                     animeItems={section.items}
-                    isLoading={section.isLoading} 
+                    isLoading={section.isLoading}
                     error={section.error}
-                    onAnimeClick={handleCardClick} 
+                    onAnimeClick={handleCardClick}
                   />
                 );
               }
               
-              let itemsToDisplay = section.items;
-              
-              // If searching, only show the 'searchResults' section
               if (searchTerm.trim() !== '' && section.id !== 'searchResults') {
-                return null; 
+                return null;
               }
+              
+              if (activeView === 'myList' && section.id !== 'myList') {
+                return null;
+              }
+
 
               return (
                 <AnimeSection
                   key={section.id}
                   title={section.title}
-                  animeItems={itemsToDisplay}
-                  // Show loader for searchResults only if items are empty, for others always if loading
-                  isLoading={section.isLoading && (section.id === 'searchResults' ? itemsToDisplay.length === 0 : true)}
+                  animeItems={section.items}
+                  isLoading={section.isLoading && (section.id === 'searchResults' || section.id === 'myList' ? section.items.length === 0 : true)}
                   error={section.error}
                   onToggleFavorite={toggleFavorite}
-                  isFavorite={isFavorite} 
+                  isFavorite={isFavorite}
                   onCardClick={handleCardClick}
                 />
               );
             })}
-            
-            {/* Load More for My List */}
+
             {activeView === 'myList' && searchTerm.trim() === '' &&
-            sections.find(s => s.id === 'myList')?.pageInfo?.hasNextPage && 
+            sections.find(s => s.id === 'myList')?.pageInfo?.hasNextPage &&
             !sections.find(s => s.id === 'myList')?.isLoading && (
               <div className="text-center py-8">
                 <button
@@ -568,13 +637,12 @@ const App: React.FC = () => {
               </div>
             )}
             {activeView === 'myList' && searchTerm.trim() === '' &&
-              sections.find(s => s.id === 'myList')?.isLoading && 
-              (sections.find(s => s.id === 'myList')?.items.length ?? 0) > 0 && 
+              sections.find(s => s.id === 'myList')?.isLoading &&
+              (sections.find(s => s.id === 'myList')?.items.length ?? 0) > 0 &&
               <LoadingSpinner />}
 
-            {/* Load More for Search Results */}
             {searchTerm.trim() !== '' &&
-            sections.find(s => s.id === 'searchResults')?.pageInfo?.hasNextPage && 
+            sections.find(s => s.id === 'searchResults')?.pageInfo?.hasNextPage &&
             !sections.find(s => s.id === 'searchResults')?.isLoading && (
               <div className="text-center py-8">
                 <button
@@ -586,8 +654,8 @@ const App: React.FC = () => {
               </div>
             )}
             {searchTerm.trim() !== '' &&
-              sections.find(s => s.id === 'searchResults')?.isLoading && 
-              (sections.find(s => s.id === 'searchResults')?.items.length ?? 0) > 0 && 
+              sections.find(s => s.id === 'searchResults')?.isLoading &&
+              (sections.find(s => s.id === 'searchResults')?.items.length ?? 0) > 0 &&
               <LoadingSpinner />}
 
           </>
