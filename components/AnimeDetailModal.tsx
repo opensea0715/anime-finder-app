@@ -1,30 +1,21 @@
+
 import React, { useEffect, useCallback, useRef } from 'react';
 import { AniListMedia, MediaStatus } from '../types';
 import { GENRE_MAP, STATUS_MAP, DEFAULT_PLACEHOLDER_IMAGE, SEASONS } from '../constants';
 import XMarkIcon from './icons/XMarkIcon';
-import HeartIcon from './icons/HeartIcon';
-// Removed SparklesIcon and LoadingSpinner imports for recommendations
-// Removed geminiService import
+import HeartIcon from './icons/HeartIcon'; // HeartIcon is now used
 
 interface AnimeDetailModalProps {
   anime: AniListMedia | null;
   onClose: () => void;
-  onToggleFavorite: (id: number) => void;
-  isFavorite: (id: number) => boolean;
+  onToggleFavorite: (anime: AniListMedia) => void; 
+  isFavorite: (id: number) => boolean; 
   initialFocusRef?: HTMLElement | null; 
 }
 
 const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onToggleFavorite, isFavorite, initialFocusRef }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  // Removed recommendationButtonRef
-
-  // Removed recommendation state variables
-  // const [recommendations, setRecommendations] = useState<AnimeRecommendationItem[]>([]);
-  // const [isLoadingRecommendations, setIsLoadingRecommendations] = useState<boolean>(false);
-  // const [recommendationError, setRecommendationError] = useState<string | null>(null);
-  // const [showRecommendations, setShowRecommendations] = useState<boolean>(false);
-
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -61,11 +52,6 @@ const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onT
       document.body.style.overflow = 'hidden';
       document.addEventListener('keydown', handleKeyDown);
       closeButtonRef.current?.focus(); 
-      // Reset recommendation state when a new anime is opened (No longer needed)
-      // setRecommendations([]);
-      // setIsLoadingRecommendations(false);
-      // setRecommendationError(null);
-      // setShowRecommendations(false);
     } else {
       document.body.style.overflow = 'auto';
     }
@@ -75,8 +61,6 @@ const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onT
       if (!anime) initialFocusRef?.focus(); 
     };
   }, [anime, handleKeyDown, initialFocusRef]);
-
-  // Removed handleFetchRecommendations function
 
   if (!anime) return null;
 
@@ -95,7 +79,7 @@ const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onT
     : '放送日未定';
   
   const seasonLabel = anime.season ? SEASONS.find(s => s.value === anime.season)?.label : '';
-  const currentIsFavorite = isFavorite(anime.id);
+  const currentIsFavorite = isFavorite(anime.id); 
 
   return (
     <div 
@@ -129,16 +113,19 @@ const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onT
             onError={(e) => (e.currentTarget.src = DEFAULT_PLACEHOLDER_IMAGE)}
             loading="lazy"
           />
+          
            <button
               onClick={(e) => {
                 e.stopPropagation();
-                onToggleFavorite(anime.id);
+                onToggleFavorite(anime);
               }}
               className="absolute top-2 left-2 p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black focus-visible:ring-[#00d4ff]"
               aria-label={currentIsFavorite ? `${title}をお気に入りから削除` : `${title}をお気に入りに追加`}
+              aria-pressed={currentIsFavorite}
             >
               <HeartIcon isFilled={currentIsFavorite} className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
+            
         </div>
 
         <div className="p-4 sm:p-5 md:p-6 lg:p-8 flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-[#00d4ff] scrollbar-track-[#1a252f]">
@@ -182,10 +169,6 @@ const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({ anime, onClose, onT
               </div>
             </div>
           )}
-
-          {/* Recommendation Section Removed */}
-          {/* <div className="mt-4 sm:mt-6 pt-3 border-t border-gray-700"> ... </div> */}
-
 
           {anime.nextAiringEpisode && (
             <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-[#1a252f] rounded">

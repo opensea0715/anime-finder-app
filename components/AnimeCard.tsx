@@ -2,12 +2,12 @@
 import React from 'react';
 import { AniListMedia, MediaStatus } from '../types';
 import { GENRE_MAP, STATUS_MAP, DEFAULT_PLACEHOLDER_IMAGE } from '../constants';
-import HeartIcon from './icons/HeartIcon';
+import HeartIcon from './icons/HeartIcon'; // HeartIcon is now used
 
 interface AnimeCardProps {
   anime: AniListMedia;
-  onToggleFavorite: (id: number) => void;
-  isFavorite: boolean;
+  onToggleFavorite: (anime: AniListMedia) => void; 
+  isFavorite: boolean; 
   onCardClick: (anime: AniListMedia) => void;
 }
 
@@ -77,17 +77,20 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onToggleFavorite, isFavori
             新着
           </span>
         )}
+        
         <button
           onClick={(e) => {
             e.stopPropagation(); 
             e.preventDefault(); 
-            onToggleFavorite(anime.id);
+            onToggleFavorite(anime);
           }}
-          className="absolute top-2 right-2 p-1.5 bg-black bg-opacity-50 rounded-full hover:bg-opacity-75 transition-opacity opacity-75 group-hover:opacity-100 focus:opacity-100"
+          className="absolute top-2 right-2 p-1.5 bg-black bg-opacity-50 rounded-full hover:bg-opacity-75 transition-opacity opacity-75 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black focus-visible:ring-[#00d4ff]"
           aria-label={isFavorite ? `${title}をお気に入りから削除` : `${title}をお気に入りに追加`}
+          aria-pressed={isFavorite}
         >
           <HeartIcon isFilled={isFavorite} className="w-5 h-5" />
         </button>
+        
       </div>
       <div className="p-3 flex flex-col flex-grow"> {/* Slightly reduced padding */}
         <h3 className="text-md font-semibold text-white mb-1 truncate group-hover:text-[#00d4ff] transition-colors duration-200" title={title}>{title}</h3>

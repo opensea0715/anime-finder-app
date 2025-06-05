@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { AiringScheduleEntry, DaySchedule, AniListMedia } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -8,9 +9,8 @@ interface BroadcastCalendarProps {
   isLoading: boolean;
   error: string | null;
   onCardClick: (anime: AniListMedia) => void;
-  // Favorite props are passed down for modal, but not used directly in CalendarAnimeCard
-  onToggleFavorite: (id: number) => void;
-  isFavorite: (id: number) => boolean;
+  onToggleFavorite: (anime: AniListMedia) => void; 
+  isFavorite: (id: number) => boolean; 
 }
 
 const getWeekDays = (currentDate: Date): DaySchedule[] => {
@@ -44,6 +44,7 @@ const BroadcastCalendar: React.FC<BroadcastCalendarProps> = ({
   isLoading,
   error,
   onCardClick,
+  // onToggleFavorite and isFavorite are passed down for AnimeDetailModal, not used directly in CalendarAnimeCard
 }) => {
   const today = useMemo(() => new Date(), []); // Memoize to prevent re-calculating 'today' on every render
 

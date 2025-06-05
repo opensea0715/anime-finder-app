@@ -136,7 +136,7 @@ export interface SeasonOption {
   label: string;
 }
 
-export type ActiveView = 'home' | 'myList' | 'calendar'; // Added 'calendar'
+export type ActiveView = 'home' | 'calendar' | 'myList'; // Re-added 'myList'
 
 export interface ScoreRangeOption {
   value: ScoreRangeValue;
@@ -158,8 +158,8 @@ export interface SortOption {
 export interface AnimeDetailModalProps {
   anime: AniListMedia | null;
   onClose: () => void;
-  onToggleFavorite: (id: number) => void;
-  isFavorite: (id: number) => boolean;
+  onToggleFavorite: (anime: AniListMedia) => void; 
+  isFavorite: (animeId: number) => boolean; 
   initialFocusRef?: HTMLElement | null;
 }
 

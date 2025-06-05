@@ -167,9 +167,11 @@ const Header: React.FC<HeaderProps> = ({
                 <button onClick={() => onViewChange('home')} className={navButtonClass('home')} aria-current={activeView === 'home' ? 'page' : undefined}>
                   ホーム
                 </button>
+                
                 <button onClick={() => onViewChange('myList')} className={navButtonClass('myList')} aria-current={activeView === 'myList' ? 'page' : undefined}>
                   マイリスト
                 </button>
+                
                 <button onClick={() => onViewChange('calendar')} className={navButtonClass('calendar')} aria-current={activeView === 'calendar' ? 'page' : undefined}>
                   放送カレンダー
                 </button>

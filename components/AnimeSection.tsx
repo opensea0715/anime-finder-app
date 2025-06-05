@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AniListMedia } from '../types';
 import AnimeCard from './AnimeCard';
@@ -8,8 +9,8 @@ interface AnimeSectionProps {
   animeItems: AniListMedia[];
   isLoading: boolean;
   error: string | null;
-  onToggleFavorite: (id: number) => void;
-  isFavorite: (id: number) => boolean;
+  onToggleFavorite: (anime: AniListMedia) => void; 
+  isFavorite: (id: number) => boolean; 
   onCardClick: (anime: AniListMedia) => void;
 }
 
@@ -18,8 +19,8 @@ const AnimeSection: React.FC<AnimeSectionProps> = ({
   animeItems,
   isLoading,
   error,
-  onToggleFavorite,
-  isFavorite,
+  onToggleFavorite, 
+  isFavorite, 
   onCardClick,
 }) => {
   if (isLoading) {
@@ -41,13 +42,11 @@ const AnimeSection: React.FC<AnimeSectionProps> = ({
   }
 
   if (!animeItems || animeItems.length === 0) {
-    // Don't show "Not found" if it's a section that might legitimately be empty sometimes
-    // unless it's explicitly an error state handled above.
-    // For example, "My List" when empty, or "Trending" if API returns none.
-    // App.tsx shows a global "not found" if ALL sections are empty.
-    // So, this component can choose to render nothing or a subtle message.
-    // For now, if no items and no error/loading, render nothing to avoid clutter.
-    // Consider a specific message for empty "My List" if this component handles it.
+    // For "My List", a specific message will be handled in App.tsx if favoriteAnimes is empty.
+    // For other sections, this message is appropriate.
+    if (title === "マイリスト") { // This check might be redundant if App.tsx handles empty My List.
+        return null; // App.tsx will show the "マイリストにはまだ何も登録されていません。" message.
+    }
     return (
         <div className="py-8">
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-3 px-1">{title}</h2>
@@ -64,8 +63,8 @@ const AnimeSection: React.FC<AnimeSectionProps> = ({
           <AnimeCard
             key={`${title}-${anime.id}`} // Ensure unique keys if anime appears in multiple sections
             anime={anime}
-            onToggleFavorite={onToggleFavorite}
-            isFavorite={isFavorite(anime.id)}
+            onToggleFavorite={onToggleFavorite} 
+            isFavorite={isFavorite(anime.id)} 
             onCardClick={onCardClick}
           />
         ))}
